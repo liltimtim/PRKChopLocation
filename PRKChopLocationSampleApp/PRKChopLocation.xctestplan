@@ -1,0 +1,33 @@
+{
+  "configurations" : [
+    {
+      "id" : "EA4468D8-7C26-40FA-B72E-6A78DFBF7435",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : {
+      "targets" : [
+        {
+          "containerPath" : "container:",
+          "identifier" : "PRKChopLocation",
+          "name" : "PRKChopLocation"
+        }
+      ]
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "PRKChopLocationTests",
+        "name" : "PRKChopLocationTests"
+      }
+    }
+  ],
+  "version" : 1
+}
