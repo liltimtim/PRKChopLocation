@@ -5,8 +5,12 @@ public final class PRKChopLocation {
     
     private var locationMonitor: PRKChopLocationMonitorProtocol!
     
-    public init(monitor: PRKChopLocationMonitorProtocol = PRKChopLocationMonitor()) {
+    private var geocoder: PRKChopCLGeocoderProtocol!
+    
+    public init(monitor: PRKChopLocationMonitorProtocol = PRKChopLocationMonitor(),
+                geocoder: PRKChopCLGeocoderProtocol = PRKChopCLGeocoder()) {
         self.locationMonitor = monitor
+        self.geocoder = geocoder
     }
     
     @MainActor
@@ -14,10 +18,9 @@ public final class PRKChopLocation {
         return try await locationMonitor.getCurrentLocation()
     }
     
-    public func address(from location: CLLocation) async throws -> CLPlacemark {
-        let geo = CLGeocoder()
-        guard let results = try await geo.reverseGeocodeLocation(location).first else { throw PRKChopLocationError.invalidAddress }
-        return results
+    @MainActor
+    public func address(from location: CLLocation) async throws -> any PRKChopCLPlacemarkProtocol {
+        return try await geocoder.reverseGeocodeLocation(location)
     }
     
     public func beginMonitoringLocation() -> AsyncStream<CLLocation> { locationMonitor.beginMonitoringLocationChanges() }

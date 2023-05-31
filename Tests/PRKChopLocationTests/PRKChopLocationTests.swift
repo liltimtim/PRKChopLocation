@@ -68,5 +68,56 @@ final class PRKChopLocationTests: XCTestCase {
         }
     }
     
+    func test_monitor_locations() async {
+        // given
+        class MockMonitor: PRKChopLocationMonitorProtocol {
+            static let location: CLLocation = .init()
+            var authorizationStatus: CLAuthorizationStatus { return .denied }
+            
+            func requestPermission(with permissionType: CLAuthorizationStatus) async throws -> CLAuthorizationStatus {
+                return .authorizedWhenInUse
+            }
+            
+            func getCurrentLocation() async throws -> CLLocation {
+                return .init()
+            }
+            
+            func beginMonitoringLocationChanges() -> AsyncStream<CLLocation> {
+                return AsyncStream { con in
+                    con.yield(MockMonitor.location)
+                    con.finish()
+                }
+            }
+        }
+        let givenLocation = MockMonitor.location
+        sut = PRKChopLocation(monitor: MockMonitor())
+        let expectedCount = 1
+        var loaded = 0
+        for try await res in sut.beginMonitoringLocation() {
+            XCTAssertEqual(res, givenLocation)
+            loaded += 1
+        }
+        XCTAssertEqual(loaded, expectedCount)
+    }
+    
+    func test_reverse_geocode_valid_address() async {
+        // given
+        class MockGeocoder: PRKChopCLGeocoderProtocol {
+            func reverseGeocodeLocation(_ location: CLLocation) async throws -> any PRKChopCLPlacemarkProtocol {
+                return PRKChopCLPlacemark(street: "123 Test Street", city: "TestCity", state: "TS", postalCode: "12345")
+            }
+        }
+        let givenAddress = PRKChopCLPlacemark(street: "123 Test Street", city: "TestCity", state: "TS", postalCode: "12345")
+        sut = PRKChopLocation(geocoder: MockGeocoder())
+        // when
+        do {
+            let result = try await sut.address(from: .init())
+            // then
+            XCTAssertEqual(result as! PRKChopCLPlacemark, givenAddress)
+        } catch {
+            XCTFail(error.localizedDescription)
+        }
+        
+    }
+    
 }
-

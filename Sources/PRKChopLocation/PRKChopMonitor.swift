@@ -14,7 +14,7 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
     private var currentLocationContinuation: CheckedContinuation<CLLocation, Error>?
     public var authorizationStatus: CLAuthorizationStatus { return monitor.authorizationStatus }
 
-    private var locationsContinuation: AsyncStream<CLLocation>.Continuation?
+    internal var locationsContinuation: AsyncStream<CLLocation>.Continuation?
     
     public init(monitor: CLLocationManager = CLLocationManager(),
                 locationUsageType: CLAuthorizationStatus = .authorizedWhenInUse) {
@@ -36,6 +36,12 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
         }
     }
     
+    /// Requests permission to read the users current GPS location.
+    ///
+    /// Permission Type can be one of `.authorizedAlways` or `.authorizedWhenInUse` and any other permission type will result in an error of `PRKChopLocationError.invalidPermissionRequested`
+    ///
+    /// - Parameters:
+    ///     - permissionType: one of `.authorizedWhenInUse` or `.authorizedAlways`
     @MainActor
     @discardableResult
     public func requestPermission(with permissionType: CLAuthorizationStatus) async throws -> CLAuthorizationStatus {
@@ -47,7 +53,8 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
             case .authorizedWhenInUse:
                 monitor.requestWhenInUseAuthorization()
             default:
-                fatalError("Requested invalid CLAuthorizationStatus when it should have been one of authorizedAlways or authorizedWhenInUse")
+                continuation.resume(with: .failure(PRKChopLocationError.invalidPermissionRequested))
+                self.authorizationContinuation = nil
             }
         }
     }
@@ -70,7 +77,7 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
         }
     }
     
-    private func currentLocation() async throws -> CLLocation {
+    internal func currentLocation() async throws -> CLLocation {
         return try await withCheckedThrowingContinuation { continuation in
             self.currentLocationContinuation = continuation
             self.monitor.requestLocation()
@@ -87,6 +94,7 @@ extension PRKChopLocationMonitor: CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.first else {
             currentLocationContinuation?.resume(throwing: PRKChopLocationError.locationNotDetermined)
+            locationsContinuation?.finish()
             return
         }
         currentLocationContinuation?.resume(with: .success(location))
