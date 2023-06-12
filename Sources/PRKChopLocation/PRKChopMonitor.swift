@@ -25,7 +25,9 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
     }
     
     public func beginMonitoringLocationChanges() -> AsyncStream<CLLocation> {
+        #if os(iOS) || os(macOS)
         monitor.startUpdatingLocation()
+        #endif
         return AsyncStream { cont in
             self.locationsContinuation?.finish()
             self.locationsContinuation = cont
@@ -49,7 +51,11 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
             self.authorizationContinuation = continuation
             switch permissionType {
             case .authorizedAlways:
+                #if os(iOS) || os(macOS)
                 monitor.requestAlwaysAuthorization()
+                #else
+                monitor.requestWhenInUseAuthorization()
+                #endif
             case .authorizedWhenInUse:
                 monitor.requestWhenInUseAuthorization()
             default:
@@ -62,15 +68,22 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
     @MainActor
     public func getCurrentLocation() async throws -> CLLocation {
         switch authorizationStatus {
+        #if os(iOS) || os(macOS)
         case .authorized, .authorizedAlways, .authorizedWhenInUse:
             return try await currentLocation()
-            
+        #else
+        case .authorizedWhenInUse:
+            return try await currentLocation()
+        #endif
         case .denied, .restricted:
             throw PRKChopLocationError.permissionDeniedOrRestricted
             
         case .notDetermined:
             try await requestPermission(with: .authorizedWhenInUse)
             return try await getCurrentLocation()
+            
+        case .authorizedAlways:
+            return try await currentLocation()
             
         @unknown default:
             throw PRKChopLocationError.locationNotDetermined

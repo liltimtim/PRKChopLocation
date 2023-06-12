@@ -7,7 +7,8 @@ let package = Package(
     name: "PRKChopLocation",
     platforms: [
         .iOS(.v14),
-        .tvOS(.v14)
+        .tvOS(.v14),
+        .macOS(.v10_15)
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.

@@ -7,7 +7,9 @@
 
 import Foundation
 import CoreLocation
+#if canImport(Contacts)
 import Contacts
+#endif
 
 /// Struct wraps functionality for `CLGeocoder`
 public struct PRKChopCLGeocoder: PRKChopCLGeocoderProtocol {
@@ -51,12 +53,20 @@ public struct PRKChopCLPlacemark: PRKChopCLPlacemarkProtocol {
     
     public init(with place: CLPlacemark) {
         self.place = place
+#if os(iOS) || os(macOS)
         self.address = Self.formattedAddress(from: place)
         let postal = place.postalAddress
         self.street = postal?.street ?? ""
         self.city = postal?.city ?? ""
         self.state = postal?.state ?? ""
         self.postalCode = postal?.postalCode ?? ""
+#else
+        self.address = ""
+        self.street = ""
+        self.city = ""
+        self.state = ""
+        self.postalCode = ""
+        #endif
     }
     
     public init(street: String, city: String, state: String, postalCode: String) {
@@ -65,17 +75,23 @@ public struct PRKChopCLPlacemark: PRKChopCLPlacemarkProtocol {
         self.state = state
         self.postalCode = postalCode
         self.place = nil
+#if os(iOS) || os(macOS)
         let postal = CNMutablePostalAddress()
         postal.street = street
         postal.city = city
         postal.state = state
         postal.postalCode = postalCode
         self.address = CNPostalAddressFormatter.string(from: postal, style: .mailingAddress)
+#else
+        self.address = ""
+        #endif
     }
     
+    #if os(iOS) || os(macOS)
     public static func formattedAddress(from placemark: CLPlacemark) -> String {
         return placemark.formattedAddress(style: .mailingAddress)
     }
+    #endif
 }
 
 extension PRKChopCLPlacemark {
@@ -94,10 +110,11 @@ public extension String {
         return copy.isEmpty
     }
 }
-
+#if os(iOS) || os(macOS)
 public extension CLPlacemark {
     func formattedAddress(style: CNPostalAddressFormatterStyle) -> String {
         guard let postalAddress = self.postalAddress else { return "" }
         return CNPostalAddressFormatter.string(from: postalAddress, style: style)
     }
 }
+#endif
