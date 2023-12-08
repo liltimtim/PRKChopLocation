@@ -23,10 +23,10 @@ final class PRKChopMonitorTests: XCTestCase {
     // MARK: - Request Permission
     func test_requestPermission_denied() async {
         // given
-        sut = .init(monitor: MockCLLocationManager(with: .denied), locationUsageType: .authorizedWhenInUse)
+        sut = .init(monitor: MockCLLocationManager(with: .denied), locationUsageType: .authorizedAlways)
         // when
         do {
-            let result = try await sut.requestPermission(with: .authorizedWhenInUse)
+            let result = try await sut.requestPermission(with: .authorizedAlways)
             XCTAssertEqual(result, .denied)
         } catch {
             XCTAssertEqual(error as! PRKChopLocationError, .permissionDeniedOrRestricted)
@@ -35,7 +35,7 @@ final class PRKChopMonitorTests: XCTestCase {
     
     func test_requestPermission_invalid_permission() async {
         // given
-        sut = .init(monitor: MockCLLocationManager(with: .denied), locationUsageType: .authorizedWhenInUse)
+        sut = .init(monitor: MockCLLocationManager(with: .denied), locationUsageType: .authorizedAlways)
         // when
         do {
             let result = try await sut.requestPermission(with: .denied)
@@ -48,7 +48,7 @@ final class PRKChopMonitorTests: XCTestCase {
     // MARK: - get current location
     func test_getCurrentLocation_denied_permission_authorization_when_in_use() async {
         // given
-        sut = .init(monitor: MockCLLocationManager(with: .denied), locationUsageType: .authorizedWhenInUse)
+        sut = .init(monitor: MockCLLocationManager(with: .denied), locationUsageType: .authorizedAlways)
         
         // when
         do {
@@ -71,7 +71,7 @@ final class PRKChopMonitorTests: XCTestCase {
             XCTAssertEqual(error as? PRKChopLocationError, PRKChopLocationError.permissionDeniedOrRestricted)
         }
     }
-    
+    #if os(iOS) || os(tvOS)
     func test_getCurrentLocation_permission_allowed_authorizedWhenInUse() async {
         // given
         let expectedLocation = CLLocation()
@@ -88,7 +88,7 @@ final class PRKChopMonitorTests: XCTestCase {
             XCTFail(error.localizedDescription)
         }
     }
-    
+    #endif
     func test_getCurrentLocation_permission_allowed_authorizedAlways() async {
         // given
         let expectedLocation = CLLocation()
@@ -111,10 +111,10 @@ final class PRKChopMonitorTests: XCTestCase {
     func test_beginMonitoringLocationChanges_no_error() async {
         // given
         let expectedLocation = CLLocation()
-        sut = .init(monitor: MockCLLocationManager(with: .authorizedWhenInUse,
+        sut = .init(monitor: MockCLLocationManager(with: .authorizedAlways,
                                                    location: expectedLocation,
                                                    shouldSucceedGettingLocation: true),
-                    locationUsageType: .authorizedWhenInUse)
+                    locationUsageType: .authorizedAlways)
         // when
         _ = await sut.beginMonitoringLocationChanges().contains(expectedLocation)
     }
@@ -124,10 +124,10 @@ final class PRKChopMonitorTests: XCTestCase {
     func test_beginMonitoringLocationChanges_error() async {
         // given
         let expectedLocation = CLLocation()
-        sut = .init(monitor: MockCLLocationManager(with: .authorizedWhenInUse,
+        sut = .init(monitor: MockCLLocationManager(with: .authorizedAlways,
                                                    location: expectedLocation,
                                                    shouldSucceedGettingLocation: false),
-                    locationUsageType: .authorizedWhenInUse)
+                    locationUsageType: .authorizedAlways)
         // when
         var result: AsyncStream<CLLocation>?
         result = sut.beginMonitoringLocationChanges()
@@ -140,10 +140,10 @@ final class PRKChopMonitorTests: XCTestCase {
     func test_beginMonitoringLocationChanges_no_locations() async {
         // given
         let expectedLocation = CLLocation()
-        sut = .init(monitor: MockCLLocationManager(with: .authorizedWhenInUse,
+        sut = .init(monitor: MockCLLocationManager(with: .authorizedAlways,
                                                    location: nil,
                                                    shouldSucceedGettingLocation: true),
-                    locationUsageType: .authorizedWhenInUse)
+                    locationUsageType: .authorizedAlways)
         // when
         let result = await sut.beginMonitoringLocationChanges().contains(expectedLocation)
         XCTAssertFalse(result)

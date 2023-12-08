@@ -11,6 +11,7 @@ public protocol PRKChopCLGeocoderProtocol {
     func reverseGeocodeLocation(_ location: CLLocation) async throws -> any PRKChopCLPlacemarkProtocol
 }
 
+/// Replacement wrapper protocol for ``CoreLocation/CLPlacemark``.
 public protocol PRKChopCLPlacemarkProtocol: Equatable {
     var address: String { get }
     var street: String { get }

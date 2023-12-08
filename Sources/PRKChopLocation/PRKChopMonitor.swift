@@ -7,6 +7,11 @@
 
 import Foundation
 import CoreLocation
+
+/// Core Location backed monitoring class
+///
+/// Allows grabbing the current user location once and requesting permission to do so or
+/// grabbing a stream of location changes via `AsyncStream`.
 public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProtocol {
     private var monitor: CLLocationManager!
     private var defaultLocationUsageType: CLAuthorizationStatus!
@@ -16,14 +21,27 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
 
     internal var locationsContinuation: AsyncStream<CLLocation>.Continuation?
     
+    /// Initializer for ``PRKChopLocationMonitor`` with default implementations if none given
+    ///
+    /// By default, the location permission type wiill be authorized always.
+    ///
+    /// - Parameters:
+    ///     - monitor: the location manager `CLLocationManager`
+    ///     - locationUsageType: the permission type to use can be one of authorized when in use or always.
     public init(monitor: CLLocationManager = CLLocationManager(),
-                locationUsageType: CLAuthorizationStatus = .authorizedWhenInUse) {
+                locationUsageType: CLAuthorizationStatus = {
+        return .authorizedAlways
+    }()) {
         super.init()
         self.monitor = monitor
         self.defaultLocationUsageType = locationUsageType
         self.monitor.delegate = self
     }
     
+    /// Starts real time location changes monitoring
+    ///
+    /// If the OS is one of iOS or macOS, it will invoke the start updating
+    /// location function which will begin monitoring for location changes.
     public func beginMonitoringLocationChanges() -> AsyncStream<CLLocation> {
         #if os(iOS) || os(macOS)
         monitor.startUpdatingLocation()
@@ -65,6 +83,20 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
         }
     }
     
+    /// Will grab the current location of the user.
+    ///
+    /// If the user has not been prompted for permission requesting their location, it will request whatever the current
+    /// ``PRKChopLocation/PRKChopLocationMonitor/authorizationStatus`` was when the
+    /// instance was created.
+    ///
+    /// ### Example Usage
+    /// ```swift
+    /// let monitor = PRKChopMonitor(locationUsageType: .authorizedWhenInUse)
+    /// try await getCurrentLocation()
+    /// ```
+    ///
+    /// Will request location `.authorizedWhenInUse` since that is what was requested.
+    /// If permission has already been given, it will request the current location and return it. If denied, it will throw ``PRKChopLocationError/locationNotDetermined``
     @MainActor
     public func getCurrentLocation() async throws -> CLLocation {
         switch authorizationStatus {
@@ -79,11 +111,12 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
             throw PRKChopLocationError.permissionDeniedOrRestricted
             
         case .notDetermined:
+            #if os(macOS)
+            try await requestPermission(with: .authorizedAlways)
+            #else
             try await requestPermission(with: .authorizedWhenInUse)
+            #endif
             return try await getCurrentLocation()
-            
-        case .authorizedAlways:
-            return try await currentLocation()
             
         @unknown default:
             throw PRKChopLocationError.locationNotDetermined
@@ -122,11 +155,19 @@ extension PRKChopLocationMonitor: CLLocationManagerDelegate {
     }
 }
 
+/// Defines the behavior of class or struct that will be a wrapper around some CoreLocation frameworks.
 public protocol PRKChopLocationMonitorProtocol {
     var authorizationStatus: CLAuthorizationStatus { get }
+    /// Request permission and return an authorization status based on user choice.
+    ///
+    /// This is an async method.
+    ///
+    /// - Parameters:
+    ///     - permissionType: use permission type to request either authorized when in use or always permission. Giving a permission other than those two will result in an error.
     @MainActor
     @discardableResult
     func requestPermission(with permissionType: CLAuthorizationStatus) async throws -> CLAuthorizationStatus
+    /// One off method that grabs the user's current location
     @MainActor
     func getCurrentLocation() async throws -> CLLocation
     /// Starts monitoring for current location changes

@@ -45,7 +45,11 @@ final class PRKChopLocationTests: XCTestCase {
             var authorizationStatus: CLAuthorizationStatus { return .denied }
             
             func requestPermission(with permissionType: CLAuthorizationStatus) async throws -> CLAuthorizationStatus {
+                #if os(macOS)
+                return .authorizedAlways
+                #else
                 return .authorizedWhenInUse
+                #endif
             }
             
             func getCurrentLocation() async throws -> CLLocation {
@@ -75,7 +79,11 @@ final class PRKChopLocationTests: XCTestCase {
             var authorizationStatus: CLAuthorizationStatus { return .denied }
             
             func requestPermission(with permissionType: CLAuthorizationStatus) async throws -> CLAuthorizationStatus {
+                #if os(macOS)
+                return .authorizedAlways
+                #else
                 return .authorizedWhenInUse
+                #endif
             }
             
             func getCurrentLocation() async throws -> CLLocation {

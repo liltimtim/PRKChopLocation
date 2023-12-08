@@ -11,12 +11,19 @@ import CoreLocation
 import Contacts
 #endif
 
-/// Struct wraps functionality for `CLGeocoder`
+/// Wraps geo encoding functionality and address formatting
+///
+/// ### Usage
+/// ```swift
+///  let coder = PRKChopCLGeocoder()
+///  let place: PRKChopCLPlacemarkProtocol = try! await coder.reverseGeocodeLocation(clLocation)
+/// ```
 public struct PRKChopCLGeocoder: PRKChopCLGeocoderProtocol {
     private let decoder = CLGeocoder()
     
     public init() { }
     
+    /// Reverse geoencodes
     public func reverseGeocodeLocation(_ location: CLLocation) async throws -> any PRKChopCLPlacemarkProtocol {
         return try await withCheckedThrowingContinuation { continuation in
             decoder.reverseGeocodeLocation(location) { placemark, err in
@@ -37,7 +44,7 @@ public struct PRKChopCLGeocoder: PRKChopCLGeocoderProtocol {
         case noPlacemarker
     }
 }
-
+/// Wraps ``CoreLocation/CLPlacemark`` into a protocol
 public struct PRKChopCLPlacemark: PRKChopCLPlacemarkProtocol {
     public var address: String
     
@@ -51,16 +58,20 @@ public struct PRKChopCLPlacemark: PRKChopCLPlacemarkProtocol {
     
     private var place: CLPlacemark?
     
+    /// Initializer with ``CoreLocation/CLPlacemark``
+    ///
+    /// Takes the placemark and fills out the various properties. It will call the
+    /// function ``PRKChopCLPlacemark/formattedAddress(from:)`` to format the `address` string.
     public init(with place: CLPlacemark) {
         self.place = place
-#if os(iOS) || os(macOS)
+        #if os(iOS) || os(macOS)
         self.address = Self.formattedAddress(from: place)
         let postal = place.postalAddress
         self.street = postal?.street ?? ""
         self.city = postal?.city ?? ""
         self.state = postal?.state ?? ""
         self.postalCode = postal?.postalCode ?? ""
-#else
+        #else
         self.address = ""
         self.street = ""
         self.city = ""
@@ -69,20 +80,29 @@ public struct PRKChopCLPlacemark: PRKChopCLPlacemarkProtocol {
         #endif
     }
     
+    /// Initializer taking in several strings to create a placemark formatted address.
+    ///
+    /// When using this initializer, the `address` property is formatted using a ``Contacts/CNMutablePostalAddress`` instead of formatting with the internal function.
+    ///
+    /// - Parameters:
+    ///     - street: the street address such as 1 Infinite Loop
+    ///     - city: the city part of an address such as Cupertino
+    ///     - state: the state part of an address such as California or CA. Note this property will not shorten a state name.
+    ///     - postalCode: 
     public init(street: String, city: String, state: String, postalCode: String) {
         self.street = street
         self.city = city
         self.state = state
         self.postalCode = postalCode
         self.place = nil
-#if os(iOS) || os(macOS)
+        #if os(iOS) || os(macOS)
         let postal = CNMutablePostalAddress()
         postal.street = street
         postal.city = city
         postal.state = state
         postal.postalCode = postalCode
         self.address = CNPostalAddressFormatter.string(from: postal, style: .mailingAddress)
-#else
+        #else
         self.address = ""
         #endif
     }
