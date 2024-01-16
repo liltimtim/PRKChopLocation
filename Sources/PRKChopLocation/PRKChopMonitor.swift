@@ -83,20 +83,29 @@ public final class PRKChopLocationMonitor: NSObject, PRKChopLocationMonitorProto
         }
     }
     
-    /// Will grab the current location of the user.
-    ///
-    /// If the user has not been prompted for permission requesting their location, it will request whatever the current
-    /// ``PRKChopLocation/PRKChopLocationMonitor/authorizationStatus`` was when the
-    /// instance was created.
-    ///
-    /// ### Example Usage
-    /// ```swift
-    /// let monitor = PRKChopMonitor(locationUsageType: .authorizedWhenInUse)
-    /// try await getCurrentLocation()
-    /// ```
-    ///
-    /// Will request location `.authorizedWhenInUse` since that is what was requested.
-    /// If permission has already been given, it will request the current location and return it. If denied, it will throw ``PRKChopLocationError/locationNotDetermined``
+    /**
+     Retrieves the current location asynchronously.
+
+     - Returns: A `CLLocation` object representing the current location.
+
+     - Throws:
+       - `PRKChopLocationError.permissionDeniedOrRestricted`: When location permission is denied or restricted.
+       - `PRKChopLocationError.locationNotDetermined`: When the location authorization status is unknown.
+
+     - Note: This function is marked with `@MainActor` to ensure it is executed on the main actor.
+
+     - Requires: The application must have the necessary permissions to access location services.
+
+     Example usage:
+
+     ```swift
+     do {
+         let currentLocation = try await getCurrentLocation()
+         // Use the current location as needed
+     } catch {
+         // Handle errors
+     }
+     */
     @MainActor
     public func getCurrentLocation() async throws -> CLLocation {
         switch authorizationStatus {
